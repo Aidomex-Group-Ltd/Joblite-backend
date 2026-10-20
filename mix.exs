@@ -8,7 +8,9 @@ defmodule Joblite.Core.MixProject do
       elixir: "~> 1.20.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: [check: ["format --check-formatted", "compile --warnings-as-errors", "test"]]
+      aliases: [
+        check: ["format --check-formatted", "compile --warnings-as-errors", "credo", "test"]
+      ]
     ]
   end
 
@@ -24,7 +26,8 @@ defmodule Joblite.Core.MixProject do
     [
       {:ecto_sql, "~> 3.14.0"},
       {:postgrex, ">= 0.0.0"},
-      {:phoenix_pubsub, "~> 2.2"}
+      {:phoenix_pubsub, "~> 2.2"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 end
