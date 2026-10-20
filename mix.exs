@@ -6,6 +6,7 @@ defmodule Joblite.Core.MixProject do
       app: :joblite_core,
       version: "0.1.0",
       elixir: "~> 1.20.0",
+      elixirc_paths: if(Mix.env() == :test, do: ["lib", "test/support"], else: ["lib"]),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: [

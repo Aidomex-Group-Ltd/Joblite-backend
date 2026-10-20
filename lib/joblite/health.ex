@@ -6,13 +6,17 @@ defmodule Joblite.Health do
     %{ui: "Phoenix LiveView", database: "PostgreSQL", runtime: "one release"}
   end
 
-  @spec readiness() :: :ok | {:error, :database_unavailable}
-  def readiness do
-    if Process.whereis(Joblite.Repo), do: check_database(), else: unavailable()
+  @doc """
+  Bounded readiness probe. The default repository is the monolith's one Repo;
+  the argument exists so failure mapping can be tested without stopping it.
+  """
+  @spec readiness(module()) :: :ok | {:error, :database_unavailable}
+  def readiness(repo \\ Joblite.Repo) do
+    if Process.whereis(repo), do: check_database(repo), else: unavailable()
   end
 
-  defp check_database do
-    case Ecto.Adapters.SQL.query(Joblite.Repo, "SELECT 1", [], timeout: 2_000) do
+  defp check_database(repo) do
+    case Ecto.Adapters.SQL.query(repo, "SELECT 1", [], timeout: 2_000) do
       {:ok, _result} -> :ok
       {:error, _reason} -> unavailable()
     end
