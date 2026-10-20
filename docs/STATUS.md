@@ -48,11 +48,31 @@ Date: 20 October 2026. Architecture revision: 2.0.
 - Compatible commits: backend `49510b1`, frontend `ca33fb6`. Full evidence:
   `docs/iterations/P01.md`.
 
+## Verified on the Linux host (implementation session, 20 October 2026, continued)
+
+- P02.01 databases: isolated postgres:18 on `127.0.0.1:5543` (host PostgreSQL 14
+  owns 5432; `fsync=off` documented for this local-only volume after its first
+  init stalled >220s and was recreated empty). `joblite_dev` + `joblite_test`
+  exist; migration ledger empty (`schema_migrations`, 0 rows).
+- P02.02 Sandbox helpers: Repo starts in all envs; `:manual` Sandbox mode;
+  `Joblite.DataCase` (backend) and `JobliteWeb.ConnCase` (frontend) own
+  connections per test; tests prove `current_database()=joblite_test`,
+  ownership denial and `allow_runner` allowance.
+- P02.03 readiness: `readiness/1` failure mapping tested (missing repo,
+  unreachable port); live smoke `/health/live` 200, `/health/ready` 200 with DB
+  (was 503 in P01), `/` 200; liveness independent of the database.
+- P02.04 conventions: handbook §8 documents empty forward-only ledger, UUID
+  PK/FK defaults from `config/shared.exs`, UTC timestamps, Sandbox rollback,
+  composite FKs for tenant consistency; no speculative tables.
+- Compatible commits: backend `1a34aa7`, frontend `e73633c`. Full evidence:
+  `docs/iterations/P02.md`.
+
 ## Not established
 
-- PostgreSQL development/test databases, migrations, Sandbox test helpers (P02).
-- Release boot with real runtime credentials (P11 gate).
 - Authentication, tenant isolation, ATS persistence, AI behavior or production readiness.
+- Release boot with real runtime credentials (P11 gate).
+- Any application table or schema migration (ledger still empty; first real
+  migration is P03.01).
 - GitHub remotes or published repositories.
 
 ## Next actions
@@ -61,8 +81,10 @@ Date: 20 October 2026. Architecture revision: 2.0.
 2. ~~Complete P01.01: verify the pinned toolchain can execute.~~ Done.
 3. ~~Resolve dependencies, format, compile and execute the authored tests under P01.~~ Done.
 4. ~~Record actual command results and compatible commits before marking any phase verified.~~ Done for P00/P01.
-5. P02.01: create isolated development and test databases. The host PostgreSQL 14
-   already occupies TCP 5432, so the `compose.yaml` 127.0.0.1:5432 mapping conflicts;
-   decide the documented local strategy with evidence before touching any data.
+5. ~~P02.01: create isolated development and test databases.~~ Done; port 5543
+   chosen with evidence; see `docs/iterations/P02.md`.
+6. P03.01: Accounts schema, identity lookup and session token lifecycle. First
+   real migration against the empty ledger; unique-identity and token
+   revocation/expiry tests on `joblite_test`.
 
 See VALIDATION.md for packaging/static checks completed in the authoring session.
