@@ -16,6 +16,10 @@ defmodule Joblite.Core.MixProject do
     [extra_applications: [:logger, :ssl], mod: {Joblite.Application, []}]
   end
 
+  def cli do
+    [preferred_envs: [check: :test]]
+  end
+
   defp deps do
     [
       {:ecto_sql, "~> 3.14.0"},

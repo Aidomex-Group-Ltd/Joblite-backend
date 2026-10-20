@@ -15,8 +15,15 @@ defmodule Joblite.Hiring.Stage do
     withdrawn: []
   }
 
-  @type t :: :submitted | :under_review | :shortlisted | :interview |
-    :offered | :hired | :rejected | :withdrawn
+  @type t ::
+          :submitted
+          | :under_review
+          | :shortlisted
+          | :interview
+          | :offered
+          | :hired
+          | :rejected
+          | :withdrawn
 
   @spec transition(term(), term()) :: {:ok, t()} | {:error, atom()}
   def transition(from, to) do
