@@ -1,11 +1,22 @@
 {
   "schema_version": 1,
-  "current_phase": "P00",
-  "current_atom": "P00.04",
+  "current_phase": "P02",
+  "current_atom": "P02.01",
   "status": "in_progress",
-  "verified_atoms": [],
+  "verified_atoms": [
+    "P00.01",
+    "P00.02",
+    "P00.03",
+    "P00.04",
+    "P01.01",
+    "P01.02",
+    "P01.03",
+    "P01.04",
+    "P01.05",
+    "P01.06"
+  ],
   "blocked_atoms": [],
-  "next_action": "Record P00 evidence, initial paired commits and STATUS.md install evidence",
-  "last_evidence_record": null,
-  "updated_at": null
+  "next_action": "P02.01: create isolated joblite_dev and joblite_test databases; resolve the TCP 5432 conflict between host PostgreSQL 14 and compose.yaml port mapping with evidence",
+  "last_evidence_record": "docs/iterations/P01.md",
+  "updated_at": "2026-10-20T13:59:52Z"
 }
