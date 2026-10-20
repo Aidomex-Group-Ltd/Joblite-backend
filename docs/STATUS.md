@@ -78,10 +78,21 @@ Date: 20 October 2026. Architecture revision: 2.0.
 - Compatible commits: backend `9431800`, frontend `93819b0`. Full evidence:
   `docs/iterations/P03.md`.
 
+## Verified on the Linux host (implementation session, 20 October 2026, continued)
+
+- P03.02 authentication: core `authenticate_by_email_password/2`
+  (timing-equalized failures); web `UserAuth` plug + on_mount hooks,
+  `SessionController` login/logout with session renew+clear, `UserLoginLive`,
+  protected `AccountLive`, auth-aware layout nav; revoked/expired tokens
+  rejected on reconnect; 25 backend + 15 frontend tests; live curl journey
+  verified end-to-end.
+- Compatible commits: backend `e503d31`, frontend `1e25122`. Full evidence:
+  `docs/iterations/P03.md`.
+
 ## Not established
 
-- Login/logout HTTP or LiveView surface (P03.02); organizations, memberships
-  and scoped roles (P03.03-P03.04).
+- Organizations, memberships, tenant scope and authorization regression cases
+  (P03.03-P03.04).
 - Tenant isolation, ATS persistence, AI behavior or production readiness.
 - Release boot with real runtime credentials (P11 gate).
 - GitHub remotes or published repositories.
@@ -96,8 +107,10 @@ Date: 20 October 2026. Architecture revision: 2.0.
    chosen with evidence; see `docs/iterations/P02.md`.
 6. ~~P03.01: Accounts schema, identity lookup and session token lifecycle.~~
    Done; see `docs/iterations/P03.md`.
-7. P03.02: login/logout and LiveView authentication integration. HTTP and
-   connected mount both validate the session; public/protected routes behave
-   intentionally; raw session token enters the Phoenix session exactly once.
+7. ~~P03.02: login/logout and LiveView authentication integration.~~ Done;
+   see `docs/iterations/P03.md`.
+8. P03.03: Organizations, memberships and scoped roles. Two seeded
+   organizations; candidate global identity and organization-specific role
+   are distinct.
 
 See VALIDATION.md for packaging/static checks completed in the authoring session.
