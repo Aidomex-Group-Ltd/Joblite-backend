@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "current_phase": "P00",
+  "current_atom": "P00.04",
+  "status": "in_progress",
+  "verified_atoms": [],
+  "blocked_atoms": [],
+  "next_action": "Record P00 evidence, initial paired commits and STATUS.md install evidence",
+  "last_evidence_record": null,
+  "updated_at": null
+}
