@@ -10,7 +10,8 @@ defmodule Joblite.Core.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: [
-        check: ["format --check-formatted", "compile --warnings-as-errors", "credo", "test"]
+        check: ["format --check-formatted", "compile --warnings-as-errors", "credo", "test"],
+        test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
       ]
     ]
   end
@@ -28,6 +29,7 @@ defmodule Joblite.Core.MixProject do
       {:ecto_sql, "~> 3.14.0"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_pubsub, "~> 2.2"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
