@@ -37,6 +37,29 @@ defmodule Joblite.Accounts do
     User.registration_changeset(user, attrs)
   end
 
+  @doc """
+  Authenticates by email and password. Returns `{:error, :invalid_credentials}`
+  for both unknown emails and wrong passwords; the unknown-email path still
+  performs a dummy bcrypt verify so the two failure modes take comparable time.
+  """
+  @spec authenticate_by_email_password(String.t(), String.t()) ::
+          {:ok, User.t()} | {:error, :invalid_credentials}
+  def authenticate_by_email_password(email, password)
+      when is_binary(email) and is_binary(password) do
+    case get_user_by_email(email) do
+      %User{hashed_password: hashed} = user ->
+        if Bcrypt.verify_pass(password, hashed) do
+          {:ok, user}
+        else
+          {:error, :invalid_credentials}
+        end
+
+      nil ->
+        Bcrypt.no_user_verify()
+        {:error, :invalid_credentials}
+    end
+  end
+
   @doc "Generates a session token for the user. The raw token is returned once; only its hash is stored."
   @spec generate_user_session_token(User.t()) :: binary()
   def generate_user_session_token(%User{} = user) do

@@ -55,6 +55,37 @@ defmodule Joblite.AccountsTest do
     end
   end
 
+  describe "authenticate_by_email_password/2" do
+    setup do
+      {:ok, user} = Accounts.register_user(valid_registration())
+      %{user: user}
+    end
+
+    test "returns the user for the correct password", %{user: user} do
+      assert {:ok, authenticated} =
+               Accounts.authenticate_by_email_password("ada@example.com", "correct-horse-1")
+
+      assert authenticated.id == user.id
+    end
+
+    test "normalizes email case before lookup", %{user: user} do
+      assert {:ok, authenticated} =
+               Accounts.authenticate_by_email_password("ADA@EXAMPLE.COM", "correct-horse-1")
+
+      assert authenticated.id == user.id
+    end
+
+    test "rejects a wrong password" do
+      assert {:error, :invalid_credentials} =
+               Accounts.authenticate_by_email_password("ada@example.com", "not-the-password")
+    end
+
+    test "rejects an unknown email through the dummy-verify path" do
+      assert {:error, :invalid_credentials} =
+               Accounts.authenticate_by_email_password("ghost@example.com", "whatever-pass")
+    end
+  end
+
   describe "session token lifecycle" do
     setup do
       {:ok, user} = Accounts.register_user(valid_registration())
