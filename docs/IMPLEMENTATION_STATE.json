@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "current_phase": "P03",
-  "current_atom": "P03.01",
+  "current_atom": "P03.02",
   "status": "planned",
   "verified_atoms": [
     "P00.01",
@@ -17,10 +17,11 @@
     "P02.01",
     "P02.02",
     "P02.03",
-    "P02.04"
+    "P02.04",
+    "P03.01"
   ],
   "blocked_atoms": [],
-  "next_action": "P03.01: Accounts schema, identity lookup and session token lifecycle; first real migration against the empty ledger; unique-identity and token revocation/expiry tests on joblite_test",
-  "last_evidence_record": "docs/iterations/P02.md",
-  "updated_at": "2026-10-20T16:36:13Z"
+  "next_action": "P03.02: login/logout and LiveView authentication integration; HTTP and connected mount validate the session; public/protected routes behave intentionally; raw session token enters the Phoenix session exactly once",
+  "last_evidence_record": "docs/iterations/P03.md",
+  "updated_at": "2026-10-20T16:54:41Z"
 }

@@ -67,12 +67,23 @@ Date: 20 October 2026. Architecture revision: 2.0.
 - Compatible commits: backend `1a34aa7`, frontend `e73633c`. Full evidence:
   `docs/iterations/P02.md`.
 
+## Verified on the Linux host (implementation session, 20 October 2026, continued)
+
+- P03.01 accounts foundation: first real migration
+  (`20261020164000`, users + users_tokens, UUID PKs, unique lowercase email,
+  FK delete_all, UTC timestamps); `Joblite.Accounts` core-only context
+  (register/normalize/hash, session-token generate/verify/revoke with 60-day
+  validity, hash-only storage); bcrypt_elixir 3.3.2 in core (+ frontend
+  transitive lockfile); 11 new tests; 21 backend + 2 frontend tests pass.
+- Compatible commits: backend `9431800`, frontend `93819b0`. Full evidence:
+  `docs/iterations/P03.md`.
+
 ## Not established
 
-- Authentication, tenant isolation, ATS persistence, AI behavior or production readiness.
+- Login/logout HTTP or LiveView surface (P03.02); organizations, memberships
+  and scoped roles (P03.03-P03.04).
+- Tenant isolation, ATS persistence, AI behavior or production readiness.
 - Release boot with real runtime credentials (P11 gate).
-- Any application table or schema migration (ledger still empty; first real
-  migration is P03.01).
 - GitHub remotes or published repositories.
 
 ## Next actions
@@ -83,8 +94,10 @@ Date: 20 October 2026. Architecture revision: 2.0.
 4. ~~Record actual command results and compatible commits before marking any phase verified.~~ Done for P00/P01.
 5. ~~P02.01: create isolated development and test databases.~~ Done; port 5543
    chosen with evidence; see `docs/iterations/P02.md`.
-6. P03.01: Accounts schema, identity lookup and session token lifecycle. First
-   real migration against the empty ledger; unique-identity and token
-   revocation/expiry tests on `joblite_test`.
+6. ~~P03.01: Accounts schema, identity lookup and session token lifecycle.~~
+   Done; see `docs/iterations/P03.md`.
+7. P03.02: login/logout and LiveView authentication integration. HTTP and
+   connected mount both validate the session; public/protected routes behave
+   intentionally; raw session token enters the Phoenix session exactly once.
 
 See VALIDATION.md for packaging/static checks completed in the authoring session.
