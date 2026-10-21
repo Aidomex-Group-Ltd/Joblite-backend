@@ -89,6 +89,22 @@ Date: 20 October 2026. Architecture revision: 2.0.
 - Compatible commits: backend `e503d31`, frontend `1e25122`. Full evidence:
   `docs/iterations/P03.md`.
 
+## Frontend feed preview integration (21 October 2026, integration session)
+
+- The approved X-style mobile feed preview (`Joblite-Feed-Integration` package)
+  is integrated into the frontend working tree at `live "/", HomeLive`:
+  thumbnail-first feed, tabs/pages, like/save, mixed-media composer with
+  browser-local media, native full-viewport media viewer, session-only state.
+  No backend context, schema, migration, dependency or router change; no
+  durable posts or uploads. Uncommitted, user-owned frontend work.
+- Verified on this host: backend `mix check` 25/25; frontend `mix check` 26/26
+  (includes 14 feed tests) with Credo clean; `mix assets.build` ok; live server
+  smoke plus Playwright checks (deferred video loading, viewer lifecycle,
+  filters, composer post, 320 px layout, no console errors). Durable
+  `Joblite.Feed`/`Joblite.Media` remain gated on P03.03–P03.04 per PHASES.md
+  and the package WORKFLOW §7–§8. Audit, plan, test plan and evidence:
+  `programs/ahis-unified-atomic/reports/feed-integration/` at the workspace root.
+
 ## Not established
 
 - Organizations, memberships, tenant scope and authorization regression cases
