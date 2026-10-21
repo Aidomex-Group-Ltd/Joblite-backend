@@ -1,0 +1,79 @@
+# Render blueprint for the Joblite monorepo (backend + frontend as siblings).
+#
+# This file is copied to the monorepo repository root by
+# backend/deploy/assemble-monorepo.sh; Render reads `render.yaml` from the
+# repository root. The Docker build reuses the same Dockerfile as local
+# verification, built from the repository root as context.
+#
+# Division of labour, matching the isolated verification stack
+# (backend/deploy/compose.yaml): migrations are NEVER implicit. The
+# `joblite-migrate` job is the same maintenance image and must be triggered
+# explicitly after each deploy (Render dashboard "Run Job", or Render Shell
+# with the same eval command). The web service itself never migrates.
+#
+# Before first deploy set PHX_HOST below to the service's real public
+# hostname (joblite-<something>.onrender.com, or a custom domain).
+
+databases:
+  - name: joblite-db
+    databaseName: joblite
+    user: joblite
+    plan: free
+    # No external (public) database connections: the app reaches the instance
+    # over Render's private network.
+    ipAllowList: []
+
+services:
+  - type: web
+    name: joblite
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/deploy/Dockerfile
+    dockerContext: .
+    dockerBuildTarget: liveview
+    # Liveness only: the render edge sends X-Forwarded-Proto, so force_ssl
+    # does not redirect real traffic; readiness stays observable at
+    # /health/ready once migrations have been applied.
+    healthCheckPath: /health/live
+    envVars:
+      # Must equal the public hostname the browser uses; it drives the https
+      # URL, secure cookies and the LiveView WebSocket origin check.
+      - key: PHX_HOST
+        value: joblite.onrender.com
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: joblite-db
+          property: connectionString
+        includeCredentials: true
+      # Render's managed PostgreSQL terminates TLS without shipping a CA file;
+      # connections stay encrypted without certificate pinning. Hosts that
+      # provide a CA bundle should switch to verify-full and add
+      # DATABASE_CA_CERT / DATABASE_SSL_SERVER_NAME instead.
+      - key: DATABASE_SSL
+        value: require
+      - key: POOL_SIZE
+        value: "10"
+      # PORT is assigned by Render and read by the release; never hardcode it.
+
+  - type: job
+    name: joblite-migrate
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/deploy/Dockerfile
+    dockerContext: .
+    dockerBuildTarget: backend
+    command: eval "JobliteWeb.Release.migrate()"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: joblite-db
+          property: connectionString
+        includeCredentials: true
+      - key: DATABASE_SSL
+        value: require
+      - key: POOL_SIZE
+        value: "5"
+      # The maintenance role deliberately demands no endpoint secrets
+      # (PHX_HOST, SECRET_KEY_BASE): this job never boots the HTTP server.

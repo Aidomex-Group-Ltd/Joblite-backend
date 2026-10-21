@@ -7,3 +7,5 @@
 /.env.*
 !/.env.example
 /erl_crash.dump
+/deploy/.env
+/deploy/certs/
