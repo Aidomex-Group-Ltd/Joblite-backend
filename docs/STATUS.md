@@ -126,6 +126,33 @@ Date: 20 October 2026. Architecture revision: 2.0.
   supplied Supabase host was unreachable from this host, so no claim is made
   about that database. Evidence: `docs/iterations/P11.md`.
 
+## Global job board intelligence directory (21 October 2026, integration session)
+
+- A source registry of nine known job boards with the permission decision that
+  governs each one: `permitted_live_aggregation` (Remote OK, Jobicy), 
+  `permission_pending` (Himalayas) and `directory_only` (Remotive, We Work
+  Remotely, Working Nomads, JobGet, Arbeitnow, No Fluff Jobs). A board whose
+  published terms allow republication may be imported with attribution and a
+  canonical link; every other board stays an outbound link. The terms behind
+  each decision were read on 21 October 2026 and are recorded per row.
+- Core context `Joblite.JobBoards` owns the registry, the per-account saved and
+  dismissed state, the feed discovery cards and the import pass. Three
+  migrations: the registry tables, the nine-row seed and the import error
+  column.
+- Web surfaces: `/explore` (the directory with its filters), `/explore/saved`
+  (the boards of the account) and one labelled discovery card in the feed that
+  links out to the board. The card rotates with the visit counter of the
+  browser session. The session token stays in `socket.private` and is
+  re-resolved for every save, remove and dismiss event.
+- Verified on this host: backend `mix test` 69/69, `mix format --check-formatted`,
+  `mix compile --warnings-as-errors`, `mix credo` (0 issues) and
+  `scripts/check_architecture.exs`; frontend `mix test` 45/45 with the same
+  format/compile/credo gates. Uncommitted in both repositories; backend HEAD
+  `f090eb6`, frontend HEAD `5390cd1`. Evidence: `docs/iterations/P12.md`.
+- Not established: no worker runs the import pass and the `:httpc` transport
+  was not exercised against a live board endpoint; the application itself
+  contacted no third-party board.
+
 ## Not established
 
 - Organizations, memberships, tenant scope and authorization regression cases
@@ -154,5 +181,15 @@ Date: 20 October 2026. Architecture revision: 2.0.
 9. P11 deployment increment: the repository-root core image is built and
    verified; the product web service still deploys from the assembled
    monorepo. Done; see `docs/iterations/P11.md`.
+10. Job board directory increment: the registry, the directory page, the feed
+    discovery card and the saved boards view are built and verified. Done; see
+    `docs/iterations/P12.md`. Open inside it: the worker that calls
+    `sync_source/2` within the permitted interval, and the preference screen
+    that writes the account's discovery preferences.
+
+The ledger `docs/IMPLEMENTATION_STATE.json` follows the atoms of
+`docs/PHASES.md`. The deployment and job board increments are recorded as
+iteration evidence (`docs/iterations/P11.md`, `docs/iterations/P12.md`) and in
+this status file.
 
 See VALIDATION.md for packaging/static checks completed in the authoring session.

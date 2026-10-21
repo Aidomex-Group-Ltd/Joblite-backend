@@ -21,7 +21,9 @@ defmodule Joblite.Core.MixProject do
   end
 
   def application do
-    [extra_applications: [:logger, :ssl], mod: {Joblite.Application, []}]
+    # :inets backs the :httpc client used by the job board synchronization
+    # transport. It is an OTP application, not an extra dependency.
+    [extra_applications: [:logger, :ssl, :inets], mod: {Joblite.Application, []}]
   end
 
   def cli do
