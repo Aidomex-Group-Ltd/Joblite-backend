@@ -56,8 +56,29 @@ defmodule Joblite.JobBoards.Card do
   }
 
   @doc "Builds the display data for one board."
-  @spec for_source(Source.t(), Listing.t() | nil) :: map()
-  def for_source(%Source{} = source, listing \\ nil) do
+  @spec present(Source.t(), Listing.t() | nil) :: map()
+  def present(%Source{} = source, _listing \\ nil) do
+    regions = source.regions || []
+    categories = source.categories || []
+
+    %{
+      id: source.id,
+      slug: source.slug,
+      name: source.name,
+      url: source.official_url,
+      region_labels: Enum.map(regions, &Region.label/1),
+      regions: regions,
+      mode: source.source_mode,
+      source_mode: source.source_mode,
+      mode_label: SourceMode.label(source.source_mode),
+      listing: nil,
+      categories: categories
+    }
+  end
+
+  defdelegate for_source(source, listing \\ nil), to: __MODULE__, as: :present
+
+  def full(%Source{} = source, listing \\ nil) do
     regions = source.regions || []
     categories = source.categories || []
 

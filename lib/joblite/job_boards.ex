@@ -36,7 +36,7 @@ defmodule Joblite.JobBoards do
   @doc "Lists the directory boards that match the filters."
   @spec directory(map()) :: {:ok, [map()]} | {:error, :registry_unavailable}
   def directory(filters \\ %{}) do
-    {:ok, filters |> SourceQuery.search() |> Repo.all() |> Enum.map(&Card.for_source/1)}
+    {:ok, filters |> SourceQuery.search() |> Repo.all() |> Enum.map(&Card.present/1)}
   rescue
     DBConnection.ConnectionError -> {:error, :registry_unavailable}
   end

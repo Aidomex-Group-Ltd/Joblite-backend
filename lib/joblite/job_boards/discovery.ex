@@ -16,7 +16,7 @@ defmodule Joblite.JobBoards.Discovery do
     permission_pending: 1
   }
 
-  @doc "Ranks sources by preference fit, then by permission mode, then by name."
+  @doc "Ranks sources by relevance, then by name."
   @spec rank([Joblite.JobBoards.Source.t()], Joblite.JobBoards.Preference.t() | nil) :: [
           Joblite.JobBoards.Source.t()
         ]
