@@ -55,16 +55,23 @@ Phoenix contexts provide a natural public boundary for domain/data operations. I
 /home/aidomex/Joblite/                 # workspace, not a third repository
   backend/                           # Git repo A
     mix.exs                          # :joblite_core
+    Dockerfile                       # core release image (this repository only)
+    .dockerignore                    # build-context filter for that image
     config/config.exs
     config/shared.exs                # shared compile-time Repo settings
+    config/secrets.exs               # dev-only loader for gitignored secrets
+    config/runtime.exs               # production composition root of the core release
     lib/joblite/
       application.ex
       repo.ex
       health.ex
+      release.ex                     # core-owned migration command
       hiring/stage.ex                # included pure-rule teaching slice
     priv/repo/migrations/
+    secrets/dev.env.example          # tracked template for the gitignored file
     test/joblite/hiring/stage_test.exs
     scripts/check_architecture.exs
+    scripts/generate_secrets.sh      # openssl generator for local secrets
     docs/                            # canonical architecture/process documentation
     compose.yaml                     # local PostgreSQL only
   frontend/                          # Git repo B
@@ -236,7 +243,9 @@ In another terminal, inspect `http://localhost:4000/`, `/health/live` and `/heal
 
 The starter disables Repo startup in test configuration because its initial tests do not use database persistence. P02 must enable a dedicated test Repo, create/migrate `joblite_test`, add DataCase/ConnCase ownership helpers and add actual database tests. Do not claim database isolation has been tested using only the included pure-rule tests.
 
-Local DB credentials in Compose are explicitly development-only and bound to loopback. Environment files are not auto-loaded; export environment variables explicitly or use a documented local tool. Never source an untrusted environment file or reuse a production URL.
+Local DB credentials in Compose are explicitly development-only and bound to loopback. Never source an untrusted environment file or reuse a production URL.
+
+The local development database is `joblite_dev_db` (user `joblite`, password `joblite_local_only`, `127.0.0.1:5543`); `joblite_test` stays isolated for the test suite. Development secrets are generated with openssl by `scripts/generate_secrets.sh` into gitignored files (`backend/secrets/dev.env`, `frontend/secrets/dev.env`). `config/secrets.exs` loads those files into the Mix configuration for `:dev` only; production and test read real environment variables and the deterministic test values instead. The generator is idempotent: an existing value is kept unless `--force` is passed.
 
 ## 11. Integration, CI and two-repository versioning
 
@@ -255,6 +264,8 @@ No GitHub repositories, CI credentials or remotes are assumed or created. Config
 Build from the frontend directory with both sibling sources present. Compile assets, assemble one release and run migrations explicitly through `JobliteWeb.Release.migrate/0`. Database migrations belong to core even though the release helper is called from the product entry point. [Phoenix releases](https://phoenix.hexdocs.pm/releases.html)
 
 Required production environment in this starter: `DATABASE_URL`, `DATABASE_CA_CERT`, `DATABASE_SSL_SERVER_NAME`, `SECRET_KEY_BASE`, `PHX_HOST`; optional `POOL_SIZE` and `PORT`. The CA path must exist in the deployed runtime. Verify TLS hostname/certificate behavior against the actual provider before production. Generate the secret with `mix phx.gen.secret`; never copy the development secret. Place the HTTP port behind a trusted TLS proxy and prevent direct public bypass of proxy assumptions.
+
+Two images exist, and the difference is ownership, not preference. The repository-root `Dockerfile` builds the core release (`:joblite_core`) from this repository alone: no endpoint, no router, no port; it boots the Repo and the PubSub and answers readiness through the core's own bounded probe. The product image (`deploy/Dockerfile`, build context = the workspace parent) assembles the `joblite` release with the sibling frontend and serves HTTP. A core image therefore requires `DATABASE_URL` (plus the TLS policy variables) and nothing else: `PHX_HOST`, `PORT` and `SECRET_KEY_BASE` belong to the browser-facing release. Migrations stay explicit in both images.
 
 P01/P11 must prove a Linux artifact can start from a temporary directory with no source checkout, and that config contains no development credentials, original source paths or compiled secrets. Do not import sibling runtime config files from `runtime.exs`; those source paths will not exist inside the release.
 

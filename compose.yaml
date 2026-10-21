@@ -10,7 +10,9 @@ services:
     environment:
       POSTGRES_USER: joblite
       POSTGRES_PASSWORD: joblite_local_only
-      POSTGRES_DB: joblite_dev
+      # The development database name. The test database is created by
+      # `mix ecto.create` (run automatically by `mix test`).
+      POSTGRES_DB: joblite_dev_db
     ports:
       # 5543 avoids the development host, where a PostgreSQL instance already
       # occupies 127.0.0.1:5432 (and 5433). config/shared.exs mirrors this port.
@@ -18,7 +20,7 @@ services:
     volumes:
       - joblite_pg:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U joblite -d joblite_dev"]
+      test: ["CMD-SHELL", "pg_isready -U joblite -d joblite_dev_db"]
       interval: 5s
       timeout: 3s
       retries: 10

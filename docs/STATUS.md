@@ -105,12 +105,35 @@ Date: 20 October 2026. Architecture revision: 2.0.
   and the package WORKFLOW §7–§8. Audit, plan, test plan and evidence:
   `programs/ahis-unified-atomic/reports/feed-integration/` at the workspace root.
 
+## Verified on the Linux host (implementation session, 21 October 2026, deployment increment)
+
+- P11.05 repository-root image: `backend/Dockerfile` builds the `:joblite_core`
+  release from this repository alone (multi-stage, non-root, 40.8 MB, no source
+  checkout and no secret in the image). The core is a service, not a web
+  service: no router, no endpoint, no port; the browser-facing release stays
+  the sibling frontend's `deploy/Dockerfile` (context = workspace parent).
+  Runtime configuration is environment-only (`DATABASE_URL`, `DATABASE_SSL`,
+  `DATABASE_CA_CERT`, `DATABASE_SSL_SERVER_NAME`, `POOL_SIZE`); migrations stay
+  explicit through `Joblite.Release.migrate/0`.
+- P11.06 development database and secrets: `joblite_dev_db` created on
+  `127.0.0.1:5543` with the documented local-only credentials (the old
+  `joblite_dev` database is untouched); `scripts/generate_secrets.sh` generates
+  `JWT_SECRET`, `SECRET_KEY_BASE` and `LIVE_SIGNING_SALT` with openssl into
+  gitignored files loaded by `config/secrets.exs` in `:dev` only.
+- Verified on this host: image build pass; migration command pass; container
+  `healthy` with a reachable database and `unhealthy` with an unreachable one;
+  no dev secret inside the image; `postgresql://` URL form accepted. The
+  supplied Supabase host was unreachable from this host, so no claim is made
+  about that database. Evidence: `docs/iterations/P11.md`.
+
 ## Not established
 
 - Organizations, memberships, tenant scope and authorization regression cases
   (P03.03-P03.04).
 - Tenant isolation, ATS persistence, AI behavior or production readiness.
 - Release boot with real runtime credentials (P11 gate).
+- Any connection to the Supabase instance named in the deployment request: the
+  host is unreachable from this machine.
 - GitHub remotes or published repositories.
 
 ## Next actions
@@ -128,5 +151,8 @@ Date: 20 October 2026. Architecture revision: 2.0.
 8. P03.03: Organizations, memberships and scoped roles. Two seeded
    organizations; candidate global identity and organization-specific role
    are distinct.
+9. P11 deployment increment: the repository-root core image is built and
+   verified; the product web service still deploys from the assembled
+   monorepo. Done; see `docs/iterations/P11.md`.
 
 See VALIDATION.md for packaging/static checks completed in the authoring session.

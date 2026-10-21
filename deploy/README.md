@@ -10,6 +10,7 @@ these scripts.
 
 | File | Responsibility |
 |---|---|
+| `../Dockerfile` | Repository-root image of the core application (`:joblite_core`), built from this repository alone. |
 | `Dockerfile` | Multi-stage build: `liveview` (product) and `backend` (one-off maintenance, migrations) targets over the same release. |
 | `Dockerfile.dockerignore` | Build-context filter next to the Dockerfile (copied to `.dockerignore` at the monorepo root for Render). |
 | `build-images.sh` | Local build entry point; tags both images with a recorded build id. |
@@ -18,6 +19,43 @@ these scripts.
 | `env.example` | Runtime configuration reference (`DATABASE_SSL`, endpoint, secrets). |
 | `render.yaml` | Render blueprint: web service + database + explicit migration job. |
 | `assemble-monorepo.sh` | Produces the single git repository Render needs (see below). |
+
+## Two images, two repositories
+
+| Image | Build context | Contents | Serves HTTP |
+|---|---|---|---|
+| `../Dockerfile` | this repository (backend) | `:joblite_core` release | no |
+| `Dockerfile` | workspace parent (backend + frontend) | `joblite` release (core + web) | yes |
+
+The core repository is the business and database side of the monolith: it has
+no router, no endpoint and no port. `./Dockerfile` at the repository root
+therefore builds the core release as a service (Repo + PubSub, no listener),
+and the browser-facing service stays the assembled `joblite` release.
+
+### Core image (`../Dockerfile`)
+
+```bash
+cd backend
+docker build -t joblite-core:<tag> .
+docker run --rm -e DATABASE_URL=... joblite-core:<tag> eval "Joblite.Release.migrate()"
+docker run -d -e DATABASE_URL=... joblite-core:<tag>
+```
+
+Runtime configuration (environment only; nothing is baked into the image):
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `DATABASE_URL` | yes | PostgreSQL connection URL. |
+| `DATABASE_SSL` | no | `verify-full` (default), `require` or `disable`. |
+| `DATABASE_CA_CERT` | with `verify-full` | CA bundle path; `require` needs none. |
+| `DATABASE_SSL_SERVER_NAME` | with `verify-full` | expected certificate name. |
+| `POOL_SIZE` | no | Repo pool size (default 5). |
+| `RELEASE_NODE` | no | node name; set it when several containers share one hostname. |
+
+There is no `PORT`, no `PHX_HOST` and no `SECRET_KEY_BASE`: the core serves
+no traffic and signs no session. Readiness is the core's own bounded probe
+(`Joblite.Health.readiness/1`) executed through the release control command,
+which is what the image's `HEALTHCHECK` does.
 
 ## Local verification (no external accounts)
 
@@ -46,8 +84,13 @@ into one pushable repository first:
 ```bash
 # both repos must be committed; the export is taken from each HEAD
 ./backend/deploy/assemble-monorepo.sh
-# → ../joblite-monorepo  (render.yaml and .dockerignore already at the root)
+# → ../joblite-monorepo  (render.yaml, .dockerignore and Dockerfile at the root)
 ```
+
+The assembled repository carries the product Dockerfile at its root as
+`./Dockerfile` (the same file as `backend/deploy/Dockerfile`), so a builder
+that defaults to `./Dockerfile` finds it; the blueprint below keeps the
+explicit path.
 
 1. Push `joblite-monorepo` to your git host and connect it in Render as a
    **Blueprint** (Render reads `render.yaml` at the repository root). Edit

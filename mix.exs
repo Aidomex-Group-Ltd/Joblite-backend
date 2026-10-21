@@ -9,6 +9,10 @@ defmodule Joblite.Core.MixProject do
       elixirc_paths: if(Mix.env() == :test, do: ["lib", "test/support"], else: ["lib"]),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      # The core is released on its own for the repository-root image
+      # (./Dockerfile). The browser-facing release is assembled by the sibling
+      # frontend project, which owns the Phoenix endpoint.
+      releases: [joblite_core: [applications: [joblite_core: :permanent]]],
       aliases: [
         check: ["format --check-formatted", "compile --warnings-as-errors", "credo", "test"],
         test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]

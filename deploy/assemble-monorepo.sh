@@ -80,6 +80,10 @@ export_repo "${FRONTEND_DIR}" frontend
 
 cp "${SCRIPT_DIR}/render.yaml" "${TARGET_DIR}/render.yaml"
 cp "${SCRIPT_DIR}/Dockerfile.dockerignore" "${TARGET_DIR}/.dockerignore"
+# Builders that default to ./Dockerfile at the repository root find the
+# product Dockerfile there. It is the same file as deploy/Dockerfile: its
+# build context is this repository root, which holds backend/ and frontend/.
+cp "${SCRIPT_DIR}/Dockerfile" "${TARGET_DIR}/Dockerfile"
 
 {
   echo "Joblite monorepo source record"

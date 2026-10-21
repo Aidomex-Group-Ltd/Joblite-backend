@@ -12,7 +12,7 @@ config :joblite_core, Joblite.Repo,
   pool_size: 5
 
 if config_env() != :prod do
-  database = if config_env() == :test, do: "joblite_test", else: "joblite_dev"
+  database = if config_env() == :test, do: "joblite_test", else: "joblite_dev_db"
 
   config :joblite_core, Joblite.Repo,
     # Port 5543 matches compose.yaml: the development host already runs another
