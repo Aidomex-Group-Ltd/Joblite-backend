@@ -45,6 +45,10 @@ defmodule Joblite.JobBoards.Card do
     temporarily_disabled: "disabled"
   }
 
+  @remote_description "Find remote job listings across a range of roles and industries."
+  @general_description "Explore job listings and discover your next opportunity."
+  @external_description "Explore job listings on this job board."
+
   @mode_notes %{
     permitted_live_aggregation:
       "Its published terms allow Joblite to import the listings with attribution and a link back.",
@@ -71,6 +75,8 @@ defmodule Joblite.JobBoards.Card do
       mode: source.source_mode,
       source_mode: source.source_mode,
       mode_label: SourceMode.label(source.source_mode),
+      description: description(source),
+      remote_summary: remote_summary(source),
       listing: nil,
       categories: categories
     }
@@ -96,6 +102,8 @@ defmodule Joblite.JobBoards.Card do
           "The integration status of this board is unknown."
         ),
       status_tone: Map.get(@status_tones, source.source_mode, "directory"),
+      description: description(source),
+      remote_summary: remote_summary(source),
       regions: regions,
       region_labels: Enum.map(regions, &Region.label/1),
       regions_summary: regions_summary(regions),
@@ -159,6 +167,33 @@ defmodule Joblite.JobBoards.Card do
   @doc "Labels for the health of a board feed."
   @spec health_labels() :: %{atom() => String.t()}
   def health_labels, do: @health_labels
+
+  defp description(%Source{} = source) do
+    cond do
+      not SourceMode.aggregate?(source.source_mode) -> @external_description
+      remote_focused?(source) -> @remote_description
+      true -> @general_description
+    end
+  end
+
+  defp remote_focused?(%Source{remote_eligibility: eligibility}),
+    do: eligibility in [:worldwide, :regional]
+
+  defp remote_summary(%Source{remote_eligibility: :worldwide} = source) do
+    if worldwide_supported?(source), do: "Worldwide remote", else: "Remote opportunities"
+  end
+
+  defp remote_summary(%Source{remote_eligibility: eligibility})
+       when eligibility in [:regional, :country_restricted],
+       do: "Remote opportunities"
+
+  defp remote_summary(_source), do: nil
+
+  defp worldwide_supported?(%Source{coverage_status: :confirmed, regions: regions}) do
+    is_list(regions) and "global" in regions
+  end
+
+  defp worldwide_supported?(_source), do: false
 
   defp coverage_label(%{coverage_status: :confirmed} = source) do
     "Coverage confirmed " <> verified_label(source)
