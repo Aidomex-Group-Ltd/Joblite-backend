@@ -51,7 +51,8 @@ RUN mix deps.get --only prod
 # (_build/esbuild-linux-x64, see Esbuild.default_bin_path/0). esbuild then
 # skips its own download because File.exists?(bin_path()) is already true.
 ARG ESBUILD_VERSION=0.25.5
-RUN curl -fsSL "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-${ESBUILD_VERSION}.tgz" \
+RUN mkdir -p /app/frontend/_build \
+ && curl -fsSL "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-${ESBUILD_VERSION}.tgz" \
       -o /tmp/esbuild.tgz \
  && mkdir -p /tmp/esbuild-pkg \
  && tar -xzf /tmp/esbuild.tgz -C /tmp/esbuild-pkg \
