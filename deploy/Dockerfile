@@ -61,8 +61,11 @@ RUN mkdir -p /app/frontend/_build \
  && rm -rf /tmp/esbuild.tgz /tmp/esbuild-pkg
 
 # Full source of both applications, then compile, production assets and release.
-COPY backend ./backend
-COPY frontend ./frontend
+# Absolute destinations matter here: WORKDIR is /app/frontend, so relative
+# copies would land under /app/frontend/{backend,frontend} instead of the
+# project roots that Mix and the sibling path dependency read.
+COPY backend /app/backend
+COPY frontend /app/frontend
 
 RUN mix deps.compile \
  && mix compile \

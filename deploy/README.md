@@ -97,14 +97,15 @@ explicit path.
    `PHX_HOST` in that file first: it must be the public hostname of the web
    service and it drives https URLs, secure cookies and the LiveView
    WebSocket origin check.
-2. The blueprint creates the `joblite` web service (image target
-   `liveview`, health check `/health/live`) and `joblite-db`. The app talks
-   to the database over Render's private network with `DATABASE_SSL=require`
-   (TLS without a CA bundle; Render ships none). Hosts that do provide a CA
-   should use `verify-full` plus `DATABASE_CA_CERT`/`DATABASE_SSL_SERVER_NAME`
-   instead.
-3. Apply migrations explicitly with the `joblite-migrate` job (Render
-   dashboard → Run Job), or from Render Shell in the web instance:
+2. The blueprint creates the `joblite` web service (the final stage of the
+   Dockerfile, `liveview`; health check `/health/live`) and `joblite-db`.
+   The app talks to the database over Render's private network with
+   `DATABASE_SSL=require` (TLS without a CA bundle; Render ships none).
+   Hosts that do provide a CA should use `verify-full` plus
+   `DATABASE_CA_CERT`/`DATABASE_SSL_SERVER_NAME` instead.
+3. Apply migrations explicitly as a one-off job created from the `joblite`
+   service (Render dashboard → Run Job), or from Render Shell in the web
+   instance:
 
    ```bash
    /app/bin/joblite eval 'JobliteWeb.Release.migrate()'
