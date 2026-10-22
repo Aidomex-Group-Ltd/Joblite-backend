@@ -20,6 +20,7 @@ defmodule Joblite.JobBoards do
     Card,
     Dismissal,
     Discovery,
+    DiscoveryCycle,
     Options,
     Preference,
     SavedBoard,
@@ -36,7 +37,7 @@ defmodule Joblite.JobBoards do
   @doc "Lists the directory boards that match the filters."
   @spec directory(map()) :: {:ok, [map()]} | {:error, :registry_unavailable}
   def directory(filters \\ %{}) do
-    {:ok, filters |> SourceQuery.search() |> Repo.all() |> Enum.map(&Card.present/1)}
+    {:ok, filters |> SourceQuery.search() |> Repo.all() |> Enum.map(&Card.full/1)}
   rescue
     DBConnection.ConnectionError -> {:error, :registry_unavailable}
   end
@@ -130,7 +131,7 @@ defmodule Joblite.JobBoards do
           order_by: [desc: saved.saved_at]
         )
       )
-      |> Enum.map(&Card.for_source/1)
+      |> Enum.map(&Card.full/1)
 
     {:ok, boards}
   rescue
@@ -153,7 +154,7 @@ defmodule Joblite.JobBoards do
       user.id
       |> SourceQuery.dismissed()
       |> Repo.all()
-      |> Enum.map(&Card.for_source/1)
+      |> Enum.map(&Card.full/1)
 
     {:ok, boards}
   rescue
@@ -183,13 +184,19 @@ defmodule Joblite.JobBoards do
   end
 
   @doc """
+  The rotation offset of the feed discovery card and when the next 30-minute
+  cycle starts. The cycle is stored in the database, not in a browser session.
+  """
+  @spec discovery_cycle(DateTime.t()) :: %{offset: non_neg_integer(), next_at: DateTime.t()}
+  def discovery_cycle(now \\ DateTime.utc_now()), do: DiscoveryCycle.current(now)
+
+  @doc """
   Builds the discovery cards for the feed.
 
   The pool is the registered sources that may be promoted, minus the boards
   the account dismissed, ranked by the account's preferences. `exclude_ids`
-  holds the boards already shown in the current session. `offset` rotates the
-  choice inside the pool, so a session that opens the feed again sees another
-  board.
+  holds the boards already shown in the current feed. `offset` rotates the
+  choice inside the pool; the feed passes the current server cycle offset.
   """
   @spec discovery_cards(User.t() | nil, keyword()) :: [map()]
   def discovery_cards(user, opts \\ []) do
@@ -214,7 +221,7 @@ defmodule Joblite.JobBoards do
 
   defp card_for(source) do
     listing = active_listing(source)
-    Card.for_source(source, listing)
+    Card.full(source, listing)
   end
 
   defp active_listing(%Source{source_mode: mode, id: source_id}) do

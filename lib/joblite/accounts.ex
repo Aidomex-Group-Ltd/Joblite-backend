@@ -2,15 +2,16 @@ defmodule Joblite.Accounts do
   @moduledoc """
   Public boundary for account identity and session-token lifecycle.
 
-  Registration validates and normalizes identity; session tokens are generated
-  as opaque random values, stored only as hashes and accepted until they expire
-  or are revoked. All persistence goes through the single core Repo; no web or
-  LiveView dependency exists here.
+  Email is the identity. Accounts may start passwordless: a six-digit one-time
+  code is emailed, and consuming it both signs the account in and confirms the
+  address. Session tokens are generated as opaque random values, stored only as
+  hashes and accepted until they expire or are revoked. All persistence goes
+  through the single core Repo; no web or LiveView dependency exists here.
   """
 
   import Ecto.Query, warn: false
 
-  alias Joblite.Accounts.{User, UserToken}
+  alias Joblite.Accounts.{LoginCode, User, UserToken}
   alias Joblite.Repo
 
   @doc "Looks up a user by email, normalizing case. Returns nil when absent."
@@ -19,9 +20,75 @@ defmodule Joblite.Accounts do
     Repo.get_by(User, email: String.downcase(email))
   end
 
+  @doc "Fetches a user by id, or nil when the account no longer exists."
+  @spec get_user(String.t()) :: User.t() | nil
+  def get_user(id) when is_binary(id), do: Repo.get(User, id)
+
   @doc "Fetches a user by id or raises."
   @spec get_user!(String.t()) :: User.t()
   def get_user!(id), do: Repo.get!(User, id)
+
+  @doc """
+  Starts a passwordless signup. Known emails are returned as `:existing` so the
+  caller can send a sign-in code without revealing whether the account existed.
+  A new account stores the chosen name and role but no password.
+  """
+  @spec start_passwordless_signup(map()) ::
+          {:ok, User.t(), :new | :existing} | {:error, Ecto.Changeset.t()}
+  def start_passwordless_signup(attrs) when is_map(attrs) do
+    email = attrs[:email] || attrs["email"] || ""
+
+    case get_user_by_email(email) do
+      %User{} = user -> {:ok, user, :existing}
+      nil -> insert_passwordless_user(attrs, email)
+    end
+  end
+
+  defp insert_passwordless_user(attrs, email) do
+    %User{}
+    |> User.passwordless_registration_changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        {:ok, user, :new}
+
+      {:error, changeset} ->
+        case get_user_by_email(email) do
+          %User{} = user -> {:ok, user, :existing}
+          nil -> {:error, changeset}
+        end
+    end
+  end
+
+  @doc """
+  Issues a sign-in code for a known email. Unknown emails return
+  `{:ok, :ignored}` so callers can respond identically without enumerating
+  accounts.
+  """
+  @spec issue_login_code(String.t()) ::
+          {:ok, :ignored | {:issued, User.t(), String.t()}}
+          | {:error, {:rate_limited, pos_integer()}}
+  def issue_login_code(email) when is_binary(email) do
+    case get_user_by_email(email) do
+      nil ->
+        Bcrypt.no_user_verify()
+        {:ok, :ignored}
+
+      %User{} = user ->
+        case LoginCode.issue(user) do
+          {:ok, code} -> {:ok, {:issued, user, code}}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  @doc "Consumes a sign-in code and returns the confirmed account."
+  @spec verify_login_code(User.t(), term()) :: {:ok, User.t()} | {:error, :invalid_code}
+  def verify_login_code(%User{} = user, code), do: LoginCode.verify(user, code)
+
+  @doc "Cancels unused sign-in codes, for example when delivery fails."
+  @spec revoke_login_codes(User.t()) :: :ok
+  def revoke_login_codes(%User{} = user), do: LoginCode.revoke(user)
 
   @doc "Registers a user from email and password."
   @spec register_user(map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
@@ -47,12 +114,16 @@ defmodule Joblite.Accounts do
   def authenticate_by_email_password(email, password)
       when is_binary(email) and is_binary(password) do
     case get_user_by_email(email) do
-      %User{hashed_password: hashed} = user ->
+      %User{hashed_password: hashed} = user when is_binary(hashed) ->
         if Bcrypt.verify_pass(password, hashed) do
           {:ok, user}
         else
           {:error, :invalid_credentials}
         end
+
+      %User{} ->
+        Bcrypt.no_user_verify()
+        {:error, :invalid_credentials}
 
       nil ->
         Bcrypt.no_user_verify()

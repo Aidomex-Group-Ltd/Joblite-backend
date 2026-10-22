@@ -2,7 +2,7 @@ defmodule Joblite.AccountsTest do
   use Joblite.DataCase, async: true
 
   alias Joblite.Accounts
-  alias Joblite.Accounts.{User, UserToken}
+  alias Joblite.Accounts.{LoginCode, User, UserToken}
 
   defp valid_registration do
     %{email: "Ada@Example.COM", password: "correct-horse-1"}
@@ -83,6 +83,114 @@ defmodule Joblite.AccountsTest do
     test "rejects an unknown email through the dummy-verify path" do
       assert {:error, :invalid_credentials} =
                Accounts.authenticate_by_email_password("ghost@example.com", "whatever-pass")
+    end
+  end
+
+  describe "passwordless signup and login codes" do
+    test "creates a confirmed-by-code account without a password" do
+      assert {:ok, %User{} = user, :new} =
+               Accounts.start_passwordless_signup(%{
+                 email: "Mira@Example.com",
+                 name: "Mira Chen",
+                 role: "candidate"
+               })
+
+      assert user.email == "mira@example.com"
+      assert user.name == "Mira Chen"
+      assert user.role == "candidate"
+      assert is_nil(user.hashed_password)
+      assert is_nil(user.confirmed_at)
+    end
+
+    test "an existing email is returned as :existing without changing the account" do
+      {:ok, original} =
+        Accounts.register_user(%{email: "ada@example.com", password: "correct-horse-1"})
+
+      assert {:ok, %User{} = user, :existing} =
+               Accounts.start_passwordless_signup(%{
+                 email: "ADA@example.com",
+                 name: "Someone Else",
+                 role: "employer"
+               })
+
+      assert user.id == original.id
+      assert user.name == nil
+      assert user.role == "candidate"
+      assert user.hashed_password == original.hashed_password
+    end
+
+    test "requires a name and a known role for a new account" do
+      assert {:error, changeset} =
+               Accounts.start_passwordless_signup(%{
+                 email: "new@example.com",
+                 name: "",
+                 role: "admin"
+               })
+
+      assert "can't be blank" in errors_on(changeset).name
+      assert "is invalid" in errors_on(changeset).role
+      refute Accounts.get_user_by_email("new@example.com")
+    end
+
+    test "login code is stored only as a hash, expires, and confirms on use" do
+      {:ok, user, :new} =
+        Accounts.start_passwordless_signup(%{
+          email: "code@example.com",
+          name: "Code User",
+          role: "employer"
+        })
+
+      assert {:ok, {:issued, issued_user, code}} = Accounts.issue_login_code(user.email)
+      assert issued_user.id == user.id
+      assert code =~ ~r/^\d{6}$/
+
+      stored = Repo.get_by!(LoginCode, user_id: user.id)
+      assert stored.code_hash == LoginCode.hash_code(code)
+      assert stored.code_hash != code
+      assert DateTime.compare(stored.expires_at, DateTime.utc_now()) == :gt
+
+      assert {:ok, confirmed} = Accounts.verify_login_code(user, code)
+      assert confirmed.id == user.id
+      assert %DateTime{} = confirmed.confirmed_at
+      assert {:error, :invalid_code} = Accounts.verify_login_code(confirmed, code)
+    end
+
+    test "rejects a wrong code and stops after five attempts" do
+      {:ok, user, :new} =
+        Accounts.start_passwordless_signup(%{
+          email: "attempt@example.com",
+          name: "Attempt User",
+          role: "candidate"
+        })
+
+      {:ok, {:issued, user, _code}} = Accounts.issue_login_code(user.email)
+
+      for _ <- 1..5 do
+        assert {:error, :invalid_code} = Accounts.verify_login_code(user, "000000")
+      end
+
+      assert {:error, :invalid_code} = Accounts.verify_login_code(user, "000000")
+    end
+
+    test "unknown emails are ignored without creating an account" do
+      assert {:ok, :ignored} = Accounts.issue_login_code("ghost@example.com")
+      refute Accounts.get_user_by_email("ghost@example.com")
+    end
+
+    test "limits code requests to five per hour per account" do
+      {:ok, user, :new} =
+        Accounts.start_passwordless_signup(%{
+          email: "rate@example.com",
+          name: "Rate User",
+          role: "candidate"
+        })
+
+      for _ <- 1..5 do
+        assert {:ok, {:issued, _, _}} = Accounts.issue_login_code(user.email)
+      end
+
+      assert {:error, {:rate_limited, seconds}} = Accounts.issue_login_code(user.email)
+      assert seconds > 0 and seconds <= 3600
     end
   end
 
