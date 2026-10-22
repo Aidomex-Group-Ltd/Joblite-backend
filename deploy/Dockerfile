@@ -21,8 +21,9 @@ ARG DEBIAN_IMAGE=debian:bookworm-slim
 FROM ${ELIXIR_IMAGE} AS build
 
 # build-essential compiles native libraries (bcrypt_elixir NIF via elixir_make).
+# curl is used to pre-fetch the esbuild binary (see below).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential ca-certificates \
+ && apt-get install -y --no-install-recommends build-essential ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -39,13 +40,31 @@ RUN mix local.hex --force && mix local.rebar --force
 WORKDIR /app/frontend
 RUN mix deps.get --only prod
 
+# Pre-install the esbuild binary deterministically.
+#
+# `mix assets.deploy` would otherwise download esbuild at build time through
+# the esbuild hex package's Erlang :httpc client. That fetch has no connect
+# timeout and hangs indefinitely in some builders, stalling the image build
+# at "Downloading esbuild from registry.npmjs.org". Fetch the same npm
+# platform tarball with curl (which the builder handles reliably) and place
+# the binary exactly where the esbuild package looks for it
+# (_build/esbuild-linux-x64, see Esbuild.default_bin_path/0). esbuild then
+# skips its own download because File.exists?(bin_path()) is already true.
+ARG ESBUILD_VERSION=0.25.5
+RUN curl -fsSL "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-${ESBUILD_VERSION}.tgz" \
+      -o /tmp/esbuild.tgz \
+ && mkdir -p /tmp/esbuild-pkg \
+ && tar -xzf /tmp/esbuild.tgz -C /tmp/esbuild-pkg \
+ && cp /tmp/esbuild-pkg/package/bin/esbuild /app/frontend/_build/esbuild-linux-x64 \
+ && chmod +x /app/frontend/_build/esbuild-linux-x64 \
+ && rm -rf /tmp/esbuild.tgz /tmp/esbuild-pkg
+
 # Full source of both applications, then compile, production assets and release.
 COPY backend ./backend
 COPY frontend ./frontend
 
 RUN mix deps.compile \
  && mix compile \
- && mix assets.setup \
  && mix assets.deploy \
  && mix release joblite
 
