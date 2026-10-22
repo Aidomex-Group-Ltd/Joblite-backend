@@ -46,7 +46,7 @@ Runtime configuration (environment only; nothing is baked into the image):
 | Variable | Required | Meaning |
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection URL. |
-| `DATABASE_SSL` | no | `verify-full` (default), `require` or `disable`. |
+| `DATABASE_SSL` | no | `require` (default), `verify-full` or `disable`. |
 | `DATABASE_CA_CERT` | with `verify-full` | CA bundle path; `require` needs none. |
 | `DATABASE_SSL_SERVER_NAME` | with `verify-full` | expected certificate name. |
 | `POOL_SIZE` | no | Repo pool size (default 5). |
